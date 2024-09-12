@@ -1,39 +1,43 @@
-# PAM - módulo pam_exec.so para execução de comando externo
+# PAM - módulo pam_exec para execução de comando externo
 
-Estou participando de um projeto, onde sou o ponto focal para Infra, de uma equipe composta por profissionais de países e empresas diferentes! E fui abordado por um Dev, com o seguinte pedido: 
+Estou participando de um projeto, onde sou o ponto focal para Infra, de uma equipe composta por profissionais de países e empresas diferentes! E fui abordado por um Dev, com o seguinte pedido:
 
->*Você consegue criar uma forma de, eu mesmo, fazer o restart da instância secundária do PGSQL do ambiente stage ? Sem me dar acesso ao servidor Linux para rodar um comando! E que seja simples para não gerar uma demanda de projeto para Infra etc...*
+> *Você consegue criar uma forma de, eu mesmo, fazer o restart da instância secundária do PGSQL do ambiente stage ? Sem me dar acesso ao servidor Linux para rodar um comando! E que seja simples para não gerar uma demanda de projeto para Infra etc...*
 
 - *Naturalmente: perguntei o motivo! E prefiro não entrar na questão...*
 
-Em detrimento do projeto e ambiente: minha diretiva principal também é apoiar com soluções que resolvam bloqueios da equipe! 
+Em detrimento do projeto e ambiente: minha diretiva principal também é apoiar com soluções que resolvam bloqueios da equipe!
 
-Dito isso! Veio de imediato em minha mente: 
+Dito isso! Veio de imediato em minha mente:
 
 - posso criar um conta de sistema! Dessa forma não há um shell válido para login
-	- com diretório home apenas para o subdiretório ~/.ssh, para armazenar o  authorized_keys com a chaves públicas
-		- e numa tentativa de login via ssh, onde a chave pública for validada: um `systemctl restart ...` é então executado.
+  - com diretório home apenas para o subdiretório \~/.ssh, para armazenar o authorized_keys com a chaves públicas
+    - e numa tentativa de login via ssh, onde a chave pública for validada: um `systemctl restart ...` é então executado.
 - seguido a ideia, de usar ssh, acho que é possível duas abordagens:
-	- usando o módulo [pam_exec](https://man7.org/linux/man-pages/man8/pam_exec.8.html) do [PAM](https://man7.org/linux/man-pages/man8/PAM.8.html)! Configurado no arquivo de configuração PAM para o SSH: `/etc/pam.d/sshd`
-	- usando o bloco condicional [Match](https://man7.org/linux/man-pages/man5/sshd_config.5.html#DESCRIPTION) do [SSHD](https://man7.org/linux/man-pages/man8/sshd.8.html) para usar o [ForceCommand](https://man7.org/linux/man-pages/man5/sshd_config.5.html)
+  - usando o módulo [pam_exec](https://man7.org/linux/man-pages/man8/pam_exec.8.html) do [PAM](https://man7.org/linux/man-pages/man8/PAM.8.html)! Configurado no arquivo de configuração PAM para o SSH: `/etc/pam.d/sshd`
+  - usando o bloco condicional [Match](https://man7.org/linux/man-pages/man5/sshd_config.5.html#DESCRIPTION) do [SSHD](https://man7.org/linux/man-pages/man8/sshd.8.html) para usar o [ForceCommand](https://man7.org/linux/man-pages/man5/sshd_config.5.html)
 
 Como há muito tempo não brinco com o PAM. Optei por ele!
 
-
 - Conta de sistema
-Criando uma conta de sistema que será de uso compartilhado, caso algum outro Dev queira fazer uso também. Para tanto, criaremos também o diretório home para armazenar o subdiretório ~/.ssh  para armazenar as chaves públicas SSH.
-```bash
+  Criando uma conta de sistema que será de uso compartilhado, caso algum outro Dev queira fazer uso também. Para tanto, criaremos também o diretório home para armazenar o subdiretório \~/.ssh para armazenar as chaves públicas SSH.
+
+``` bash
 useradd -r -s /usr/sbin/nologin -m -c 'user para restart pgsql' restartpg && getent passwd restartpg 
 restartpg:x:995:986:user para restart pgsql:/home/restartpg:/usr/sbin/nologin
 ```
 
 - /etc/ssh/sshd_config
-1. Porque não precaver...
-```bash
+
+1.  Porque não precaver...
+
+``` bash
 cp /etc/ssh/sshd_config{,.BKP}
 ```
-2. Garanta que o PAM esteja habilitado!   
-```bash
+
+2.  Garanta que o PAM esteja habilitado!  
+
+``` bash
 # Set this to 'yes' to enable PAM authentication, account processing,
 # and session processing. If this is enabled, PAM authentication will
 # be allowed through the KbdInteractiveAuthentication and
@@ -47,12 +51,16 @@ UsePAM yes
 ```
 
 - /etc/pam.d/sshd
-1. Não custa nada fazer um backup do arquivo ;)
-```bash
+
+1.  Não custa nada fazer um backup do arquivo ;)
+
+``` bash
 cp /etc/pam.d/sshd{,.BKP}
 ```
-2. Em seguida inserimos nossa configuração 
-```bash
+
+2.  Em seguida inserimos nossa configuração
+
+``` bash
 cat <<EoF >> /etc/pam.d/sshd 
 
 # TCPIP ME - @faioli 10/09/24
@@ -62,7 +70,8 @@ EoF
 ```
 
 - /usr/local/bin/sshpamexec.sh
-```bash
+
+``` bash
   #!/usr/bin/env bash
   ##
   # Autor: Thiago Torres Faioli - A.K.A: 0xttfx - thiago@tcpip.net.br
@@ -120,16 +129,18 @@ EoF
 ```
 
 - Testando
-```bash
+
+``` bash
 $ ssh -l restartpg srvpgsql1.dns.com
 Last login: Wed Sep 11 13:24:40 2024 from ???.??.???.???
 This account is currently not available
 Connection to srvpgsql1.dns.com exit closed.
-``` 
+```
 
 - /var/log/sshpamexec.log
-Esse será o log gerado das operações 
-```bash
+  Esse será o log gerado das operações
+
+``` bash
 tail -30 /var/log/sshpamexec.log
 
 [11-09-2024 11:12:32] - - - -
@@ -158,4 +169,3 @@ tail -30 /var/log/sshpamexec.log
 Sep 11 13:24:37 stg-ccp-pgsql1 systemd[1]: Starting postgresql@16-main.service - PostgreSQL Cluster 16-main...
 Sep 11 13:24:40 stg-ccp-pgsql1 systemd[1]: Started postgresql@16-main.service - PostgreSQL Cluster 16-main.
 ```
-
