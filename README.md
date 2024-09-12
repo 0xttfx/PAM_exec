@@ -1,3 +1,5 @@
+# PAM - módulo pam_exec.so para execução de comando externo
+
 Estou participando de um projeto, onde sou o ponto focal para Infra, de uma equipe composta por profissionais de países e empresas diferentes! E fui abordado por um Dev, com o seguinte pedido: 
 
 >*Você consegue criar uma forma de, eu mesmo, fazer o restart da instância secundária do PGSQL do ambiente stage ? Sem me dar acesso ao servidor Linux para rodar um comando! E que seja simples para não gerar uma demanda de projeto para Infra etc...*
