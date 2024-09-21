@@ -18,6 +18,7 @@ Dito isso! Veio de imediato em minha mente:
   - usando o bloco condicional [Match](https://man7.org/linux/man-pages/man5/sshd_config.5.html#DESCRIPTION) do [SSHD](https://man7.org/linux/man-pages/man8/sshd.8.html) para usar o [ForceCommand](https://man7.org/linux/man-pages/man5/sshd_config.5.html)
 
 Como há muito tempo não brinco com o PAM. Optei por ele!
+- porém, deixo claro que: não me veio nenhuma outra ideia de como aplicar tecnicamente no Linux! Então, é um favor que você me faz, criticar o que proponho aqui! ;)
 
 - Conta de sistema
 
